@@ -6,6 +6,7 @@ pipeline {
       idleMinutes 1
     }
   }
+  
   stages {
     stage('Build') {
       parallel {
@@ -18,6 +19,7 @@ pipeline {
         }
       }
     }
+    
     stage('Test') {
       parallel {
         stage('Unit Tests') {
@@ -29,6 +31,7 @@ pipeline {
         }
       }
     }
+    
     stage('Package') {
       parallel {
         stage('Create Jarfile') {
@@ -45,6 +48,22 @@ pipeline {
       steps {
         // TODO
         sh "echo done"
+      }
+    }
+
+    stage('OCI Image BnP') {
+      steps {
+        container('kaniko') {
+          sh '''
+            /kaniko/executor \
+              -f `pwd`/Dockerfile \
+              -c `pwd` \
+              --insecure \
+              --skip-tls-verify \
+              --cache=true \
+              --destination=docker.io/kiplongu/dsodemo
+          '''
+        }
       }
     }
   }
