@@ -80,7 +80,7 @@ pipeline {
               --insecure \
               --skip-tls-verify \
               --cache=true \
-              --destination=docker.io/kiplongu/dsodemo
+              --destination=docker.io/kiplongu/dso-demo
           '''
         }
       }
