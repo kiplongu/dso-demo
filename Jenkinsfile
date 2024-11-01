@@ -1,89 +1,95 @@
 pipeline {
-  agent {
-    kubernetes {
-      yamlFile 'build-agent.yaml'
-      defaultContainer 'maven'
-      idleMinutes 1
-    }
-  }
-
-  stages {
-    stage('Build') {
-      parallel {
-        stage('Compile') {
-          steps {
-            container('maven') {
-              sh 'mvn compile'
-            }
-          }
+    agent {
+        kubernetes {
+            yamlFile 'build-agent.yaml'
+            defaultContainer 'maven'
+            idleMinutes 1
         }
-      }
     }
 
-    stage('Static Analysis') {
-      parallel {
-        stage('Unit Tests') {
-          steps {
-            container('maven') {
-              sh 'mvn test'
+    stages {
+        stage('Build') {
+            parallel {
+                stage('Compile') {
+                    steps {
+                        container('maven') {
+                            sh 'mvn compile'
+                        }
+                    }
+                }
             }
-          }
         }
-        stage('SCA') {
-          steps {
-            container('maven') {
-              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                sh 'mvn org.owasp:dependency-check-maven:check'
-              }
-            }
-          }
-          post {
-            always {
-              archiveArtifacts(
-                allowEmptyArchive: true,
-                artifacts: 'target/dependency-check-report.html',
-                fingerprint: true,
-                onlyIfSuccessful: true
-              )
-            }
-          }
-        }
-      }
-    }
 
-    stage('Package') {
-      parallel {
-        stage('Create Jarfile') {
-          steps {
-            container('maven') {
-              sh 'mvn package -DskipTests'
+        stage('Static Analysis') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        container('maven') {
+                            sh 'mvn test'
+                        }
+                    }
+                }
+                stage('SCA') {
+                    steps {
+                        container('maven') {
+                            catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                                sh 'mvn org.owasp:dependency-check-maven:check'
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            archiveArtifacts(
+                                allowEmptyArchive: true,
+                                artifacts: 'target/dependency-check-report.html',
+                                fingerprint: true,
+                                onlyIfSuccessful: true
+                            )
+                        }
+                    }
+                }
             }
-          }
         }
-      }
-    }
 
-    stage('Deploy to Dev') {
-      steps {
-        // TODO
-        sh "echo done"
-      }
-    }
-
-    stage('OCI Image BnP') {
-      steps {
-        container('kaniko') {
-          sh '''
-            /kaniko/executor \
-              -f `pwd`/Dockerfile \
-              -c `pwd` \
-              --insecure \
-              --skip-tls-verify \
-              --cache=true \
-              --destination=docker.io/kiplongu/dso-demo
-          '''
+        stage('Package') {
+            parallel {
+                stage('Create Jarfile') {
+                    steps {
+                        container('maven') {
+                            sh 'mvn package -DskipTests'
+                        }
+                    }
+                }
+            }
         }
-      }
+
+        stage('Deploy to Dev') {
+            steps {
+                // TODO
+                sh "echo done"
+            }
+        }
+
+        stage('OCI Image BnP') {
+            steps {
+                container('kaniko') {
+                    script {
+                        echo 'Starting Kaniko to build and push Docker image...'
+                    }
+                    sh '''
+                        /kaniko/executor \
+                          -f `pwd`/Dockerfile \
+                          -c `pwd` \
+                          --insecure \
+                          --skip-tls-verify \
+                          --cache=true \
+                          --destination=docker.io/kiplongu/dso-demo
+                    '''
+                    script {
+                        echo 'Kaniko step completed.'
+                    }
+                }
+            }
+        }
     }
-  }
 }
