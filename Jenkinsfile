@@ -84,7 +84,7 @@ pipeline {
                           --skip-tls-verify \
                           --cache=true \
                           --destination=docker.io/kiplongu/dso-demo
-                    '''
+                    ''' || error("Kaniko build failed")
                     script {
                         echo 'Kaniko step completed.'
                     }
