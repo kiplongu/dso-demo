@@ -68,6 +68,47 @@ pipeline {
             }
         }
 
+        // New stage for SSH Scan
+        stage('SSH Scan on Local Machine') {
+            steps {
+                script {
+                    // Define the remote host (your local machine)
+                    def remote = [:]
+                    remote.name = "local-laptop"
+                    remote.host = "127.0.0.1" // Use the IP address of your local machine if not localhost
+                    remote.allowAnyHosts = true
+
+                    // Use Jenkins credentials for SSH
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'sshUser', // Your Jenkins SSH credentials ID
+                        keyFileVariable: 'identity',
+                        usernameVariable: 'userName')]) {
+
+                        remote.user = userName
+                        remote.identityFile = identity
+
+                        stage("Running Scan on Local Machine") {
+                            // Create a simple scan script or execute commands on the laptop
+                            writeFile file: 'scan.sh', text: '''
+                                echo "Starting scan on local machine";
+                                df -h; # Example: check disk space
+                                echo "Scan completed."
+                            '''
+
+                            // Upload scan script to your local machine
+                            sshPut remote: remote, from: 'scan.sh', into: '/tmp/scan.sh'
+
+                            // Execute scan script on your local machine
+                            sshScript remote: remote, script: '/tmp/scan.sh'
+
+                            // Remove scan script after execution
+                            sshRemove remote: remote, path: '/tmp/scan.sh'
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Dev') {
             steps {
                 container('docker-tools') { // Use the appropriate container for the ArgoCD CLI
