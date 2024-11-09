@@ -1,0 +1,30 @@
+## Configuration for Dependency Track Helm deployment
+## Enable Ingress for external access
+ingress:
+  enabled: true
+  tls:
+    enabled: false
+    secretName: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+
+## Allow large BOM XML uploads
+host: dependencytrack.example.org
+frontend:
+  replicaCount: 1
+  service:
+    type: NodePort  # Set frontend service type to NodePort
+
+## API server resources for Dependency Track
+apiserver:
+  resources:
+    requests:
+      cpu: 1
+      memory: 3000Mi
+    limits:
+      cpu: 2
+      memory: 7Gi
+  service:
+    type: NodePort  # Set API service type to NodePort
+

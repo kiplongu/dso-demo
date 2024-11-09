@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dso-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dso-demo
+  template:
+    metadata:
+      labels:
+        app: dso-demo
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'dso-demo'
+        vault.hashicorp.com/agent-inject-secret-database: 'secret/dso-demo/database'
+    spec:
+      serviceAccountName: dso-demo  # Ensure this service account exists
+      containers:
+      - name: dso-demo
+        image: gouravshah/dso-demo  # Replace with the actual image for your app
+        ports:
+        - containerPort: 8080  # Adjust as needed for your application
+

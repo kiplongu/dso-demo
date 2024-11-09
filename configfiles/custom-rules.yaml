@@ -1,0 +1,28 @@
+customRules:
+  rules-dsodemo.yaml: |-
+    - macro: dsodemo_consider_syscalls
+      condition: (evt.num < 0)
+    - macro: app_dsodemo
+      condition: container and container.image contains "dso-demo"
+    # Restricting listening ports to selected set
+    - list: dsodemo_allowed_inbound_ports_tcp
+      items: [8080]
+    - rule: Unauthorized process opened an outbound connection (dsodemo)
+      desc: A dsodemo process tried to open an outbound connection and is not whitelisted
+      condition: outbound and evt.rawres >= 0 and app_dsodemo
+      output: Non-whitelisted process opened an outbound connection (command=%proc.cmdline connection=%fd.name)
+      priority: WARNING
+    - rule: Unexpected inbound tcp connection dsodemo
+      desc: Detect inbound traffic to dsodemo using tcp on a port outside of expected set
+      condition: fd.type in (inet, inet6) and evt.rawres >= 0 and not fd.sport in (dsodemo_allowed_inbound_ports_tcp) and app_dsodemo
+      output: Inbound network connection to dsodemo on unexpected port (command=%proc.cmdline pid=%proc.pid connection=%fd.name sport=%fd.sport user=%user.name %container.info image=%container.image)
+      priority: NOTICE
+    # Restricting spawned processes to selected set
+    - list: dsodemo_allowed_processes
+      items: ["java", "-jar", "/run/demo.jar"]
+    - rule: Unexpected spawned process dsodemo
+      desc: Detect a process started in a dsodemo container outside of an expected set
+      condition: spawned_process and not proc.name in (dsodemo_allowed_processes) and app_dsodemo
+      output: Unexpected process spawned in dsodemo container (command=%proc.cmdline pid=%proc.pid user=%user.name %container.info image=%container.image)
+      priority: NOTICE
+
